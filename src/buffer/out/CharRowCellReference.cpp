@@ -108,7 +108,7 @@ CharRowCellReference::const_iterator CharRowCellReference::end() const
 }
 #pragma warning(pop)
 
-bool operator==(const CharRowCellReference& ref, const std::vector<wchar_t>& glyph)
+bool operator==(const CharRowCellReference& ref, const std::wstring& glyph)
 {
     const DbcsAttribute& dbcsAttr = ref._cellData().DbcsAttr();
     if (glyph.size() == 1 && dbcsAttr.IsGlyphStored())
@@ -130,7 +130,7 @@ bool operator==(const CharRowCellReference& ref, const std::vector<wchar_t>& gly
     }
 }
 
-bool operator==(const std::vector<wchar_t>& glyph, const CharRowCellReference& ref)
+bool operator==(const std::wstring& glyph, const CharRowCellReference& ref)
 {
     return ref == glyph;
 }

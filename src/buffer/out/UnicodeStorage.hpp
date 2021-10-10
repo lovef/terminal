@@ -14,29 +14,22 @@ Author(s):
 
 #pragma once
 
-#include <vector>
-#include <unordered_map>
-#include <climits>
+#include <robin_hood.h>
 
-// std::unordered_map needs help to know how to hash a COORD
 namespace std
 {
     template<>
     struct hash<COORD>
     {
-        // Routine Description:
-        // - hashes a coord. coord will be hashed by storing the x and y values consecutively in the lower
-        // bits of a size_t.
-        // Arguments:
-        // - coord - the coord to hash
-        // Return Value:
-        // - the hashed coord
-        constexpr size_t operator()(const COORD& coord) const noexcept
+        // We take COORD by value not just because it neatly fits into a register...
+        // Reading unaligned pointers doesn't work
+        constexpr size_t operator()(COORD coord) const noexcept
         {
-            size_t retVal = coord.Y;
-            const size_t xCoord = coord.X;
-            retVal |= xCoord << (sizeof(coord.Y) * CHAR_BIT);
-            return retVal;
+            uint64_t x = til::bit_cast<uint32_t>(coord);
+            x ^= x >> 33U;
+            x *= UINT64_C(0xff51afd7ed558ccd);
+            x ^= x >> 33U;
+            return gsl::narrow_cast<size_t>(x);
         }
     };
 }
@@ -44,21 +37,18 @@ namespace std
 class UnicodeStorage final
 {
 public:
-    using key_type = typename COORD;
-    using mapped_type = typename std::vector<wchar_t>;
+    using key_type = COORD;
+    using mapped_type = std::wstring;
 
     UnicodeStorage() noexcept;
 
     const mapped_type& GetText(const key_type key) const;
-
-    void StoreGlyph(const key_type key, const mapped_type& glyph);
-
+    void StoreGlyph(const key_type key, mapped_type&& glyph);
     void Erase(const key_type key) noexcept;
-
     void Remap(const std::unordered_map<SHORT, SHORT>& rowMap, const std::optional<SHORT> width);
 
 private:
-    std::unordered_map<key_type, mapped_type> _map;
+    robin_hood::unordered_map<key_type, mapped_type> _map;
 
 #ifdef UNIT_TESTING
     friend class UnicodeStorageTests;

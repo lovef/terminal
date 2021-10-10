@@ -26,7 +26,7 @@ const UnicodeStorage::mapped_type& UnicodeStorage::GetText(const key_type key) c
 // Arguments:
 // - key - the key into the storage
 // - glyph - the glyph data to store
-void UnicodeStorage::StoreGlyph(const key_type key, const mapped_type& glyph)
+void UnicodeStorage::StoreGlyph(const key_type key, mapped_type&& glyph)
 {
     _map.insert_or_assign(key, glyph);
 }
@@ -50,10 +50,11 @@ void UnicodeStorage::Erase(const key_type key) noexcept
 void UnicodeStorage::Remap(const std::unordered_map<SHORT, SHORT>& rowMap, const std::optional<SHORT> width)
 {
     // Make a temporary map to hold all the new row positioning
-    std::unordered_map<key_type, mapped_type> newMap;
+    decltype(_map) newMap;
+    newMap.reserve(_map.size());
 
     // Walk through every stored item.
-    for (const auto& pair : _map)
+    for (auto& pair : _map)
     {
         // Extract the old coordinate position
         const auto oldCoord = pair.first;
@@ -90,9 +91,9 @@ void UnicodeStorage::Remap(const std::unordered_map<SHORT, SHORT>& rowMap, const
         const auto newCoord = COORD{ oldCoord.X, newRowId };
 
         // Put the adjusted coordinate into the map with the original value.
-        newMap.emplace(newCoord, pair.second);
+        newMap.emplace(newCoord, std::move(pair.second));
     }
 
     // Swap into the stored map, free the temporary when we exit.
-    _map.swap(newMap);
+    _map = std::move(newMap);
 }
